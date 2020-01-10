@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/style.css">
+  <title>ManPages</title>
+</head>
+<body>
+  <div class="main">
+    <h1>Literal Kernel's Manual Pages</h1>
+    <form id="manform" method="get" action="/man">
+      <input id="query" type="text" name="query" value="$query" size="50" autocapitalize="none">
+      <button type="submit">man</button>
+      <button type="submit" name="apropos" value="1">apropos</button>
+      <br>
+      <select name="section">
+        $selection
+      </select>
+    </form>
+
+    <hr>
+
+    <pre>$template</pre>
+
+  </div>
+</body>
+</html>
