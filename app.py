@@ -1,11 +1,12 @@
-from twisted.web import server, resource, static
+from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
 from man2html import man_process
 from subprocess import Popen, PIPE
 import string
 import os
 import os.path
-from formhelper import genselection
+import json
+
 
 class WebMan(resource.Resource):
     def render_GET(self, request):
@@ -36,18 +37,14 @@ class WebMan(resource.Resource):
             else:
                 manhtml = 'Empty input. Please type a manual page and search again.'
 
-        with open('template.html') as f:
-            html = f.read()
-
-        params = {
-            'template': manhtml,
-            'query': query,
-            'section': section,
-            'selection': genselection(section)
+        request.responseHeaders.addRawHeader(b"content-type", b"application/json")
+        resp = {
+            'code': 'success',
+            'content': manhtml
         }
-        result = string.Template(html).substitute(params)
-        
-        return bytes(result, 'utf8')
+        resp = json.dumps(resp).encode('utf-8')
+        return resp
+
 
 class Root(resource.Resource):
     def getChild(self, name, request):
@@ -56,11 +53,10 @@ class Root(resource.Resource):
             return WebMan()
         return resource.Resource.getChild(self, name, request)
 
-WebManStatic = static.File('static')
 
 root = Root()
 root.putChild(b'man', WebMan())
-root.putChild(b'static', WebManStatic)
+
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
