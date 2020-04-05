@@ -36,7 +36,7 @@ def man_process(s:str):
     content = re_g_bold.sub(repl_bold, content)
     content = re_g_italic.sub(repl_italic, content)
     content = re_g_underline.sub(repl_underline, content)
-    content = re_manlink.sub('<a href="/man?query=\g<1>&section=\g<2>">\g<0></a>', content)
+    content = re_manlink.sub('<span class="inter-link" style="text-decoration:underline;color:blue" data-section="\g<2>" data-item="\g<1>">\g<0></span>', content)
     content = re_url.sub('<a href="\g<0>">\g<0></a>', content)
     content = re_sect.sub('<a href="#\g<1>" id="\g<1>">\g<0></a>', content)
     return '\n'.join([head, content, foot])
