@@ -1,21 +1,24 @@
-from twisted.web import server, resource, static
-from twisted.internet import reactor, endpoints
+from twisted.web import server, resource
+from twisted.internet import reactor
+from twisted.python import log
 from man2html import man_process
 from subprocess import Popen, PIPE
 import string
 import os
 import os.path
-from formhelper import genselection
+import json
 
-class WebMan(resource.Resource):
-    def render_GET(self, request):
 
-        if b'section' in request.args:
-            section = int(request.args[b'section'][0])
+class WebMan(resource.Resource):    
+    def render_POST(self, request):
+        form = json.load(request.content)
+
+        if 'section' in form:
+            section = int(form['section'])
         else:
             section = 0
 
-        if b'apropos' in request.args and request.args[b'apropos'][0] == b'1':
+        if 'apropos' in form and form['apropos'] == '1':
             command = ['apropos']
             if section != 0:
                 command.extend(['-s', str(section)])
@@ -24,11 +27,11 @@ class WebMan(resource.Resource):
             if section != 0:
                 command.extend(['-S', str(section)])
 
-        # 用 else 语句的话 else 语句也执行了，不懂不懂
+        # TODO error handling
         query = ''
         manhtml = ''
-        if b'query' in request.args:
-            query = str(request.args[b'query'][0], 'utf8')
+        if 'query' in form:
+            query = form['query']
             if len(query) > 0:
                 command.append(query)
                 p = Popen(command, stdout=PIPE, stderr=PIPE)
@@ -36,18 +39,19 @@ class WebMan(resource.Resource):
             else:
                 manhtml = 'Empty input. Please type a manual page and search again.'
 
-        with open('template.html') as f:
-            html = f.read()
-
-        params = {
-            'template': manhtml,
-            'query': query,
-            'section': section,
-            'selection': genselection(section)
+        request.setHeader("content-type", "application/json")
+        # you should not do like this
+        request.setHeader('Access-Control-Allow-Origin', '*')
+        request.setHeader('Access-Control-Allow-Methods', 'POST')
+        request.setHeader('Access-Control-Allow-Headers', 'x-prototype-version,x-requested-with')
+        request.setHeader('Access-Control-Max-Age', '2520') # 48h
+        resp = {
+            'code': 'success',
+            'content': manhtml
         }
-        result = string.Template(html).substitute(params)
-        
-        return bytes(result, 'utf8')
+        resp = json.dumps(resp).encode('utf-8')
+        return resp
+
 
 class Root(resource.Resource):
     def getChild(self, name, request):
@@ -56,16 +60,16 @@ class Root(resource.Resource):
             return WebMan()
         return resource.Resource.getChild(self, name, request)
 
-WebManStatic = static.File('static')
 
 root = Root()
 root.putChild(b'man', WebMan())
-root.putChild(b'static', WebManStatic)
+
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    from sys import stdout
+    log.startLogging(stdout)
 
     site = server.Site(root)
-    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
-    endpoint.listen(site)
+    reactor.listenTCP(8080, site)
     reactor.run()
